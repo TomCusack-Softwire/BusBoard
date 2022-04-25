@@ -15,5 +15,9 @@
   "bugs": {
     "url": "https://github.com/TomCusack-Softwire/BusBoard/issues"
   },
-  "homepage": "https://github.com/TomCusack-Softwire/BusBoard#readme"
+  "homepage": "https://github.com/TomCusack-Softwire/BusBoard#readme",
+  "dependencies": {
+    "readline-sync": "^1.4.10",
+    "request": "^2.88.2"
+  }
 }
