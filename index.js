@@ -8,77 +8,87 @@ try {
     api_key = "?app_key=" + fs.readFileSync("api_key", "utf-8");
 } catch (_) {}
 
-function get_StopPoint_data(stop_id, callback, message="") {
+function get_StopPoint_data(stop_id) {
     let url = "https://api.tfl.gov.uk/StopPoint/" + stop_id + "/Arrivals" + api_key;
 
-    request(url, (error, response, body) => {
-        if (response && response.statusCode !== 200) {
-            console.error("Error accessing StopPoint stop.");
-        } else {
-            console.log("\n" + message);
-            let json = JSON.parse(body);
-            if (json.length > 0) {
-                for (let bus of json) {
-                    let minutes = (new Date(bus["expectedArrival"]) - new Date()) / 60000;
-                    bus["minutesNumber"] = minutes;
-                    if (minutes <= 0) {
-                        bus["minutes"] = "Due";
-                    } else {
-                        bus["minutes"] = Math.ceil(minutes) + " minutes";
-                    }
-                }
-
-                json.sort((a, b) => a["minutesNumber"] - b["minutesNumber"]);
-                callback(json.slice(0, 5));
+    return new Promise((resolve, reject) => {
+        request(url, (error, response, body) => {
+            if (response && response.statusCode !== 200) {
+                reject("Error accessing StopPoint stop.");
             } else {
-                console.log("No buses scheduled right now.");
+                let json = JSON.parse(body);
+                if (json.length > 0) {
+                    for (let bus of json) {
+                        let minutes = (new Date(bus["expectedArrival"]) - new Date()) / 60000;
+                        bus["minutesNumber"] = minutes;
+                        if (minutes <= 0) {
+                            bus["minutes"] = "Due";
+                        } else {
+                            bus["minutes"] = Math.ceil(minutes) + " minutes";
+                        }
+                    }
+
+                    json.sort((a, b) => a["minutesNumber"] - b["minutesNumber"]);
+                    resolve(json.slice(0, 5));
+                } else {
+                    resolve("No buses scheduled right now.");
+                }
             }
-        }
+        });
     });
 }
 
-function get_StopPoint_data_from_station(station, callback) {
+function get_lat_long(postcode) {
+    let url = "https://api.postcodes.io/postcodes/" + postcode;
+    return new Promise((resolve, reject) => {
+        request(url, (error, response, body) => {
+            let json = JSON.parse(body);
+            if (json["status"] !== 200) {
+                reject(json["error"]);
+            } else {
+                resolve([json["result"]["latitude"], json["result"]["longitude"]]);
+            }
+        });
+    });
+}
+
+function get_StopPoint_stations(lat, long) {
+    let url = "https://api.tfl.gov.uk/StopPoint/?lat=" + lat + "&lon=" + long + "&stopTypes=NaptanPublicBusCoachTram&" + api_key.slice(1);
+    return new Promise((resolve) => {
+        request(url, (error, response, body) => {
+            let stops = JSON.parse(body)["stopPoints"];
+            stops.sort((a, b) => a["distance"] - b["distance"]);
+            resolve(stops);
+        });
+    });
+}
+
+function print_data_from_station(station) {
     if (station === undefined) {
         return;
     }
 
-    get_StopPoint_data(
-        station["id"],
-        (result) => {
-            console.table(result, ["lineName", "destinationName", "minutes"]);
-            callback(result);
-        },
-        station["commonName"] + " (" + station["id"] + ", distance: " + station["distance"].toFixed(0) + "m)"
-    );
+    get_StopPoint_data(station["id"])
+        .then((timetable) => {
+            console.log();
+            console.log(station["commonName"] + " (" + station["id"] + ", distance: " + station["distance"].toFixed(0) + "m)");
+            console.table(timetable, ["lineName", "destinationName", "minutes"]);
+        })
+        .catch(console.error);
 }
 
-
-function get_lat_long(postcode, callback) {
-    let url = "https://api.postcodes.io/postcodes/" + postcode;
-    request(url, (error, response, body) => {
-        let json = JSON.parse(body);
-        if (json["status"] !== 200) {
-            console.error(json["error"]);
-        } else {
-            callback(json["result"]["latitude"], json["result"]["longitude"]);
-        }
-    });
-}
-
-function get_StopPoint_stations(lat, long, callback) {
-    let url = "https://api.tfl.gov.uk/StopPoint/?lat=" + lat + "&lon=" + long + "&stopTypes=NaptanPublicBusCoachTram&" + api_key.slice(1);
-    request(url, (error, response, body) => {
-        let stops = JSON.parse(body)["stopPoints"];
-        stops.sort((a, b) => a["distance"] - b["distance"]);
-        callback(stops);
-    });
-}
 
 let stop_id = readline.question("Enter postcode: ");
-get_lat_long(stop_id, (lat, long) => {
-    get_StopPoint_stations(lat, long, (stations) => {
-        get_StopPoint_data_from_station(stations[0], (result1) => {
-            get_StopPoint_data_from_station(stations[1], (result2) => {});
-        });
-    });
-});
+
+get_lat_long(stop_id)
+    .then((result) => {
+        return get_StopPoint_stations(result[0], result[1]);
+    })
+    .then((stations) => {
+        print_data_from_station(stations[0]);
+        return stations;
+    })
+    .then((stations) => {
+        print_data_from_station(stations[1]);
+    })
+    .catch(console.error);
