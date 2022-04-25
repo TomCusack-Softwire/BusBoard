@@ -1,6 +1,7 @@
 const fs = require("fs");
 const request = require("request");
 const readline = require("readline-sync");
+const express = require("express");
 
 // get API key, if it exists
 let api_key = "";
@@ -68,33 +69,48 @@ function print_data_from_station(station) {
         return;
     }
 
-    get_StopPoint_data(station["id"])
+    return get_StopPoint_data(station["id"])
         .then((timetable) => {
-            console.log();
-            console.log(station["commonName"] + " (" + station["id"] + ", distance: " + station["distance"].toFixed(0) + "m)");
-            console.table(timetable, ["lineName", "destinationName", "minutes"]);
-        })
-        .catch(console.error);
+            let message = "\n";
+            message += station["commonName"] + " (" + station["id"] + ", distance: " + station["distance"].toFixed(0) + "m)\n";
+            message += "Line Name\tDestination Name\tMinutes\n";
+            for (let bus of timetable) {
+                message += bus["lineName"] + "\t" + bus["destinationName"] + "\t" + bus["minutes"] + "\n";
+            }
+            return message;
+        });
 }
 
 function postcode_to_timetable(postcode) {
-    get_lat_long(postcode)
+    return get_lat_long(postcode)
         .then((result) => {
             return get_StopPoint_stations(result[0], result[1]);
         })
         .then((stations) => {
-            print_data_from_station(stations[0]);
-            return stations;
-        })
-        .then((stations) => {
-            print_data_from_station(stations[1]);
-        })
-        .catch(console.error);
+            return Promise.all([print_data_from_station(stations[0]), print_data_from_station(stations[1])])
+                .then((values) => values.join("<br>"));
+        });
 }
 
-function main() {
-    let postcode = readline.question("Enter postcode: ");
-    postcode_to_timetable(postcode);
-}
+const app = express();
 
-main();
+app.listen(3000, () => {
+    console.log("Server running on port 3000.");
+});
+
+app.get("/", (request, response) => {
+    response.send("Go to /departureBoards?postcode=<your postcode>");
+});
+
+app.get("/departureBoards", (request, response) => {
+    if (request.query["postcode"]) {
+        postcode_to_timetable(request.query["postcode"])
+            .then((message) => response.send(message))
+            .catch((error) => {
+                console.error(error);
+                response.status(400).send(error);
+            });
+    } else {
+        response.send("Please enter a postcode.");
+    }
+});
