@@ -77,18 +77,24 @@ function print_data_from_station(station) {
         .catch(console.error);
 }
 
+function postcode_to_timetable(postcode) {
+    get_lat_long(postcode)
+        .then((result) => {
+            return get_StopPoint_stations(result[0], result[1]);
+        })
+        .then((stations) => {
+            print_data_from_station(stations[0]);
+            return stations;
+        })
+        .then((stations) => {
+            print_data_from_station(stations[1]);
+        })
+        .catch(console.error);
+}
 
-let stop_id = readline.question("Enter postcode: ");
+function main() {
+    let postcode = readline.question("Enter postcode: ");
+    postcode_to_timetable(postcode);
+}
 
-get_lat_long(stop_id)
-    .then((result) => {
-        return get_StopPoint_stations(result[0], result[1]);
-    })
-    .then((stations) => {
-        print_data_from_station(stations[0]);
-        return stations;
-    })
-    .then((stations) => {
-        print_data_from_station(stations[1]);
-    })
-    .catch(console.error);
+main();
