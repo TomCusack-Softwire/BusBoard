@@ -93,6 +93,7 @@ function postcode_to_timetable(postcode) {
 
 const app = express();
 app.use(express.static("frontend"));
+app.use("/history", express.static("frontend/history.html"));
 
 app.listen(3000, () => {
     console.log("Server running on port 3000.");
