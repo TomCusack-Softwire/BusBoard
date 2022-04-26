@@ -1,6 +1,5 @@
 const fs = require("fs");
 const request = require("request");
-const readline = require("readline-sync");
 const express = require("express");
 
 // get API key, if it exists
@@ -24,8 +23,10 @@ function get_StopPoint_data(stop_id) {
                         bus["minutesNumber"] = minutes;
                         if (minutes <= 0) {
                             bus["minutes"] = "Due";
+                        } else if (minutes <= 1) {
+                            bus["minutes"] = "1 min";
                         } else {
-                            bus["minutes"] = Math.ceil(minutes) + " minutes";
+                            bus["minutes"] = Math.ceil(minutes) + " mins";
                         }
                     }
 
@@ -64,18 +65,19 @@ function get_StopPoint_stations(lat, long) {
     });
 }
 
-function print_data_from_station(station) {
+function get_data_from_station(station) {
     if (station === undefined) {
         return;
     }
 
     return get_StopPoint_data(station["id"])
         .then((timetable) => {
-            let message = "<h3>" + station["commonName"] + " (" + station["id"] + ", distance: " + station["distance"].toFixed(0) + "m)</h3>\n<ul>\n";
+            let message = "<h3 style='font-weight: normal;'><b><a class='no-link' title='Click to go to the TFL website for this stop.' href='https://tfl.gov.uk/bus/stop/";
+            message += station["id"] + "'>" + station["commonName"] + "</a></b> (" + station["distance"].toFixed(0) + "m away)</h3>\n<table>\n";
             for (let bus of timetable) {
-                message += "<li>" + bus["minutes"] + ": " + bus["lineName"] + " to " + bus["destinationName"] + "</li>\n";
+                message += "<tr><td>" + bus["lineName"] + "</td><td>" + bus["destinationName"] + "</td><td>" + bus["minutes"] + "</td></tr>\n";
             }
-            message += "</ul>";
+            message += "</table>";
             return message;
         });
 }
@@ -86,8 +88,16 @@ function postcode_to_timetable(postcode) {
             return get_StopPoint_stations(result[0], result[1]);
         })
         .then((stations) => {
-            return Promise.all([print_data_from_station(stations[0]), print_data_from_station(stations[1])])
-                .then((values) => "<h2>Results</h2>" + values.join(""));
+            return Promise.all([get_data_from_station(stations[0]), get_data_from_station(stations[1])])
+                .then((values) => {
+
+                    if (values[0] === undefined && values[1] === undefined) {
+                        return "No stations within 200m of this postcode.";
+                    } else {
+                        return values.join("");
+                    }
+
+                });
         });
 }
 
@@ -103,10 +113,7 @@ app.get("/departureBoards", (request, response) => {
     if (request.query["postcode"]) {
         postcode_to_timetable(request.query["postcode"])
             .then((message) => response.send(message))
-            .catch((error) => {
-                console.error(error);
-                response.status(400).send(error);
-            });
+            .catch((error) => response.status(400).send(error));
     } else {
         response.send("Please enter a postcode.");
     }

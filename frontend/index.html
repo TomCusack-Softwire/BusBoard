@@ -2,33 +2,35 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>Departure boards</title>
+    <title>BusBoard: Departures</title>
     <link rel="stylesheet" href="styles.css">
+    <link rel="icon" type="image/png" href="busboard.png"/>
     <script src="departures.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body>
-<h1>BusBoard</h1>
-<p>
-    <a href="history"> Explore the history of London buses > </a>
-</p>
+<div class="greyed">
+    <h1>Departure Board</h1>
+    <p><a href="history"> Explore the history of London buses > </a></p>
 
-<form onsubmit="submit_form(event)">
-    Postcode:<br>
-    <input type="text" name="postcode">
-    <input type="submit" value="Submit">
-</form>
-<div id="results">
-    <h2>Results</h2>
-    <h3>Example stop 1</h3>
-    <ul>
-        <li>2 minutes: 123 to Example Street</li>
-        <li>3 minutes: 456 to Fantasy Land</li>
-    </ul>
-    <h3>Example stop 2</h3>
-    <ul>
-        <li>1 minute: 123 to Example Street</li>
-        <li>4 minutes: 456 to Fantasy Land</li>
-    </ul>
+    Search for bus stops from a postcode:
+    <form onsubmit="submit_form(event)">
+        <input type="text" name="postcode" placeholder="Postcode">
+        <input type="submit" value="Search" id="submit_button">
+    </form>
+</div>
+<br>
+<div>
+    <div id="error">
+        <img src='!.png' alt='!'/>
+        <p id="error_text"></p>
+    </div>
+    <h3 id="results_header"></h3>
+    <div id='reload'>
+        <img src='i.png' alt='i'/>
+        <p> This departure information is out of date. Please search again to refresh the results. </p>
+    </div>
+    <div id="results"></div>
 </div>
 </body>
 </html>

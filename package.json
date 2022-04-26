@@ -18,7 +18,6 @@
   "homepage": "https://github.com/TomCusack-Softwire/BusBoard#readme",
   "dependencies": {
     "express": "^4.17.3",
-    "readline-sync": "^1.4.10",
     "request": "^2.88.2"
   }
 }
