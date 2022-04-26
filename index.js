@@ -71,12 +71,11 @@ function print_data_from_station(station) {
 
     return get_StopPoint_data(station["id"])
         .then((timetable) => {
-            let message = "\n";
-            message += station["commonName"] + " (" + station["id"] + ", distance: " + station["distance"].toFixed(0) + "m)\n";
-            message += "Line Name\tDestination Name\tMinutes\n";
+            let message = "<h3>" + station["commonName"] + " (" + station["id"] + ", distance: " + station["distance"].toFixed(0) + "m)</h3>\n<ul>\n";
             for (let bus of timetable) {
-                message += bus["lineName"] + "\t" + bus["destinationName"] + "\t" + bus["minutes"] + "\n";
+                message += "<li>" + bus["minutes"] + ": " + bus["lineName"] + " to " + bus["destinationName"] + "</li>\n";
             }
+            message += "</ul>";
             return message;
         });
 }
@@ -88,18 +87,15 @@ function postcode_to_timetable(postcode) {
         })
         .then((stations) => {
             return Promise.all([print_data_from_station(stations[0]), print_data_from_station(stations[1])])
-                .then((values) => values.join("<br>"));
+                .then((values) => "<h2>Results</h2>" + values.join(""));
         });
 }
 
 const app = express();
+app.use(express.static("frontend"));
 
 app.listen(3000, () => {
     console.log("Server running on port 3000.");
-});
-
-app.get("/", (request, response) => {
-    response.send("Go to /departureBoards?postcode=<your postcode>");
 });
 
 app.get("/departureBoards", (request, response) => {
